@@ -17,8 +17,8 @@ body {
 /* Contenedor principal */
 #game-wrapper {
   position: relative;
-  width: 900px;
-  height: 500px;
+  width: 98vw;
+  height: 96vh;
   border-radius: 14px;
   overflow: hidden;
   box-shadow: 0 0 60px rgba(120, 80, 255, 0.35);

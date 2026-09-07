@@ -16,7 +16,8 @@ const msgEl   = document.getElementById('msg');
 const scEl    = document.getElementById('sc');
 const bsEl    = document.getElementById('bs');
 
-const W = 900, H = 500;
+const wrapper = document.getElementById('game-wrapper');
+let W = wrapper.clientWidth, H = wrapper.clientHeight;
 canvas.width  = W;
 canvas.height = H;
 
@@ -33,6 +34,15 @@ scene.fog = new THREE.Fog(0x07071a, 22, 42);
 const camera = new THREE.PerspectiveCamera(55, W / H, 0.1, 100);
 camera.position.set(0, 4.0, 10);
 camera.lookAt(0, 0.5, 0);
+
+function onResize() {
+  W = wrapper.clientWidth;
+  H = wrapper.clientHeight;
+  camera.aspect = W / H;
+  camera.updateProjectionMatrix();
+  renderer.setSize(W, H);
+}
+window.addEventListener('resize', onResize);
 
 scene.add(new THREE.AmbientLight(0x334466, 0.9));
 
