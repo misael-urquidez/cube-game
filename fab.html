@@ -1,0 +1,981 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>RAM Factory</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#1e2b3a;color:#dde4ee;font-family:'Segoe UI',sans-serif;overflow:hidden;user-select:none}
+canvas{display:block;position:fixed;top:50px;left:0}
+
+/* HUD */
+#hud{position:fixed;top:0;left:0;right:0;height:50px;background:#243040;border-bottom:2px solid #e8841a;display:flex;align-items:center;padding:0 14px;gap:10px;z-index:200}
+.logo{font-size:14px;font-weight:700;color:#e8841a;margin-right:6px;letter-spacing:.05em}
+.stat{display:flex;align-items:center;gap:5px;background:#18222e;border:1px solid #3a5060;border-radius:5px;padding:4px 10px;font-size:13px;color:#ccd8e4}
+.stat .v{color:#f4a030;font-size:15px;font-weight:700;min-width:30px;text-align:right}
+.spd{padding:5px 12px;border-radius:4px;border:1px solid #3a5060;background:#1c2a38;color:#7a98b0;font-size:12px;font-weight:700;cursor:pointer;transition:all .15s}
+.spd.on{border-color:#e8841a;color:#f4a030;background:#2a1200}
+.spd:hover:not(.on){border-color:#5a7a90;color:#aac}
+
+/* VIEW SWITCH */
+#viewSwitch{margin-left:auto;display:flex;align-items:center;gap:8px;font-size:11px;color:#556}
+#viewSwitch label{display:flex;align-items:center;gap:7px;cursor:pointer}
+.sw-track{width:42px;height:22px;background:#1e2c30;border:1px solid #2c3840;border-radius:11px;position:relative;transition:background .2s}
+.sw-track.on{background:#1a3a28;border-color:#2dd4bf}
+.sw-thumb{position:absolute;top:2px;left:2px;width:16px;height:16px;background:#445;border-radius:50%;transition:all .2s}
+.sw-track.on .sw-thumb{left:22px;background:#2dd4bf}
+#viewSwitch .lbl{font-size:10px;color:#778}
+#viewSwitch .lbl.on{color:#2dd4bf}
+
+/* TIME */
+#hTime{font-size:13px;color:#2dd4bf;font-family:monospace;letter-spacing:.08em;margin-left:8px}
+
+/* TOOLBAR */
+#bar{position:fixed;bottom:0;left:0;right:200px;background:#243040;border-top:2px solid #3a5060;display:flex;align-items:center;padding:7px 12px;gap:6px;z-index:200;overflow-x:auto}
+.btn{display:flex;flex-direction:column;align-items:center;gap:2px;background:#1c2a38;border:1.5px solid #3a5060;border-radius:6px;padding:6px 10px;cursor:pointer;flex-shrink:0;min-width:64px;transition:all .12s}
+.btn:hover{border-color:#5a7a90;background:#263444}
+.btn.sel{border-color:#e8841a;background:#2a1200}
+.btn.fab{border-color:#2dd4bf;background:#0e2c28}
+.btn.fab:hover{background:#163830}
+.btn .ic{font-size:17px}
+.btn .nm{font-size:9px;color:#9ab0c4;text-align:center;line-height:1.3}
+.btn .co{font-size:9px;color:#c8902a}
+.sep{width:1px;height:36px;background:#3a5060;margin:0 4px;flex-shrink:0}
+
+/* AUTO-LINK TOGGLE */
+.autolink-toggle{display:flex;align-items:center;gap:6px;padding:4px 10px;border:1px solid #3a5060;border-radius:5px;font-size:10px;color:#8ab0c8;cursor:pointer;background:#1c2a38;flex-shrink:0;transition:all .15s}
+.autolink-toggle.on{border-color:#e8841a;color:#f4a030;background:#2a1200}
+.autolink-toggle .dot{width:8px;height:8px;border-radius:50%;background:#4a7090}
+.autolink-toggle.on .dot{background:#e8841a}
+
+/* PANEL */
+#panel{position:fixed;right:0;top:50px;bottom:0;width:200px;background:#243040;border-left:1.5px solid #3a5060;display:flex;flex-direction:column;z-index:200}
+.p-title{padding:10px 13px;font-size:10px;font-weight:700;color:#e8841a;letter-spacing:.12em;border-bottom:1px solid #2e4050}
+.p-num{padding:14px 13px;border-bottom:1px solid #2e4050;text-align:center}
+.p-num .n{font-size:36px;font-weight:700;color:#4ade80;line-height:1}
+.p-num .s{font-size:10px;color:#6a8898;margin-top:3px}
+.p-row{display:flex;justify-content:space-between;padding:6px 13px;font-size:11px;border-bottom:.5px solid #2a3a48;color:#b0c8d8}
+.p-row span:last-child{color:#f4a030;font-family:monospace}
+.p-log{flex:1;overflow-y:auto;padding:8px 13px}
+.log{font-size:10px;font-family:monospace;color:#6a8898;padding:2px 0;border-bottom:.5px solid #2a3a48}
+.log.ok{color:#4ade80}
+.log.warn{color:#f4a030}
+
+/* CONTEXT MENU */
+#ctx{position:fixed;background:#1e2e3e;border:1px solid #4a6070;border-radius:7px;padding:4px 0;z-index:500;display:none;min-width:160px;box-shadow:0 6px 20px #0009}
+.ci{padding:8px 14px;font-size:12px;cursor:pointer;color:#c0d4e4;display:flex;align-items:center;gap:8px;transition:background .1s}
+.ci:hover{background:#e8841a22;color:#f4a030}
+.ci.d:hover{background:#f8717122;color:#f87171}
+.ci.conn:hover{background:#2dd4bf22;color:#2dd4bf}
+.ci.disc:hover{background:#f8b04a22;color:#f8b04a}
+.ci-sep{height:1px;background:#2e4050;margin:4px 0}
+
+/* HINT */
+#hint{position:fixed;bottom:70px;left:50%;transform:translateX(-50%);background:#1a2838ee;border:1px solid #4a6070;border-radius:20px;padding:5px 18px;font-size:11px;color:#a0c0d8;pointer-events:none;opacity:0;transition:opacity .3s;z-index:300;white-space:nowrap}
+#hint.show{opacity:1}
+
+/* CONNECTION MODE overlay */
+#connOverlay{position:fixed;top:50px;left:0;right:200px;bottom:62px;z-index:150;pointer-events:none;border:2px solid transparent;transition:border-color .2s}
+#connOverlay.active{border-color:#2dd4bf55;pointer-events:none}
+</style>
+</head>
+<body>
+
+<div id="hud">
+  <div class="logo">⚡ RAM FACTORY</div>
+  <div class="stat">💰 <span class="v" id="hCoins">500</span> <span style="font-size:9px;color:#445">monedas</span></div>
+  <div class="stat">💾 <span class="v" style="color:#4ade80" id="hRam">0</span> <span style="font-size:9px;color:#445">RAM</span></div>
+  <div style="display:flex;gap:4px;margin-left:6px">
+    <div class="spd" id="s0" onclick="setSpd(0)">⏸</div>
+    <div class="spd on" id="s1" onclick="setSpd(1)">▶ 1×</div>
+    <div class="spd" id="s2" onclick="setSpd(2)">▶▶ 2×</div>
+  </div>
+
+  <div id="viewSwitch">
+    <label onclick="toggleView()">
+      <span class="lbl" id="vlblA">Esquemas</span>
+      <div class="sw-track" id="swTrack"><div class="sw-thumb"></div></div>
+      <span class="lbl" id="vlblB">Fábrica</span>
+    </label>
+  </div>
+  <div id="hTime">00:00</div>
+</div>
+
+<div id="panel">
+  <div class="p-title">PRODUCCIÓN</div>
+  <div class="p-num"><div class="n" id="pRam">0</div><div class="s">MÓDULOS RAM DDR5</div></div>
+  <div class="p-row"><span>Módulos</span><span id="pMods">0</span></div>
+  <div class="p-row"><span>En cola</span><span id="pQueue">0</span></div>
+  <div class="p-row"><span>Conexiones</span><span id="pConns">0</span></div>
+  <div class="p-row"><span>Estado</span><span id="pCycle">—</span></div>
+  <div class="p-log" id="pLog"><div style="font-size:9px;color:#334;margin-bottom:5px">EVENTOS</div></div>
+</div>
+
+<canvas id="c"></canvas>
+<div id="connOverlay"></div>
+
+<div id="bar">
+  <div class="btn fab" onclick="placeFab()">
+    <div class="ic">⚡</div><div class="nm">Fábrica<br>completa</div>
+  </div>
+  <div class="btn" onclick="clearFab()">
+    <div class="ic">🗑️</div><div class="nm">Limpiar</div>
+  </div>
+  <div class="sep"></div>
+  <div class="autolink-toggle on" id="autoLinkBtn" onclick="toggleAutoLink()">
+    <div class="dot"></div>
+    <span>Auto-link</span>
+  </div>
+  <div class="sep"></div>
+  <div id="tbItems" style="display:flex;gap:5px"></div>
+</div>
+
+<div id="ctx">
+  <div class="ci" id="ctxPause" onclick="ctxDoPause()">⏸ <span id="ctxPauseLbl">Pausar módulo</span></div>
+  <div class="ci conn" id="ctxConnect" onclick="ctxDoConnect()">🔗 Conectar a otro</div>
+  <div class="ci-sep"></div>
+  <div class="ci d" onclick="ctxDoRemove()">✕ Demoler</div>
+  <div class="ci" onclick="hideCtx()">✖ Cerrar</div>
+</div>
+<div id="hint"></div>
+
+<script>
+// ═══════════════════════════════════════════════════════
+//  CONFIG
+// ═══════════════════════════════════════════════════════
+const CELL = 56;
+const DEFS = [
+  {id:'supply', name:'Suministro',  icon:'📦', w:2,h:2, cycle:3,  cost:50,  out:'mat',    color:'#1e3438', dark:'#0d1c1e'},
+  {id:'litho',  name:'Litografía',  icon:'🔆', w:2,h:2, cycle:5,  cost:80,  out:'wafer',  color:'#1a2c40', dark:'#0a1828'},
+  {id:'doping', name:'Dopado',      icon:'⚗️',  w:2,h:2, cycle:4,  cost:70,  out:'chip',   color:'#281a40', dark:'#150d22'},
+  {id:'solder', name:'Soldadura',   icon:'🔧', w:2,h:2, cycle:6,  cost:90,  out:'pcb',    color:'#402010', dark:'#200e06'},
+  {id:'qa',     name:'Control QA',  icon:'🔬', w:2,h:2, cycle:3,  cost:60,  out:'tested', color:'#103828', dark:'#081c14'},
+  {id:'pack',   name:'Encapsulado', icon:'🏷️',  w:2,h:2, cycle:4,  cost:75,  out:'ram',    color:'#401028', dark:'#200814'},
+  {id:'storage',name:'Almacén',     icon:'🗄️',  w:2,h:2, cycle:0,  cost:40,  out:'out',    color:'#102038', dark:'#081020'},
+];
+const AUTO_CHAIN = ['supply','litho','doping','solder','qa','pack','storage'];
+
+// ═══════════════════════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════════════════════
+let coins=500, totalRam=0, elapsed=0, spd=1;
+let placed=[], connections=[], selected=null;
+let dragging=null, dragOff={c:0,r:0}, dragValid=true;
+let hovPid=null, ctxPid=null, logs=[];
+let cam={x:80,y:80,zoom:1};
+let panning=false, panStart={x:0,y:0}, camStart={x:0,y:0};
+let ticker=null;
+let autoLink=true;
+let connectMode=false, connectFromPid=null; // manual connection mode
+let factoryView=false; // pixel factory view
+let conveyorOffset=0;  // animated belt offset
+
+// ═══════════════════════════════════════════════════════
+//  CANVAS SETUP
+// ═══════════════════════════════════════════════════════
+const canvas=document.getElementById('c');
+const ctx=canvas.getContext('2d');
+let CW, CH;
+
+function resize(){
+  CW=window.innerWidth-200;
+  CH=window.innerHeight-50-62;
+  canvas.width=CW; canvas.height=CH;
+}
+window.addEventListener('resize',resize);
+resize();
+
+// ═══════════════════════════════════════════════════════
+//  TOOLBAR BUILD
+// ═══════════════════════════════════════════════════════
+(()=>{
+  const c=document.getElementById('tbItems');
+  DEFS.forEach(def=>{
+    const d=document.createElement('div');
+    d.className='btn';d.id='tb-'+def.id;
+    d.innerHTML=`<div class="ic">${def.icon}</div><div class="nm">${def.name}</div><div class="co">💰${def.cost}</div>`;
+    d.onclick=()=>selectDef(def.id);
+    c.appendChild(d);
+  });
+})();
+
+// ═══════════════════════════════════════════════════════
+//  DRAW LOOP
+// ═══════════════════════════════════════════════════════
+requestAnimationFrame(function loop(t){
+  conveyorOffset=(t/100)%20;
+  draw();
+  requestAnimationFrame(loop);
+});
+
+function draw(){
+  ctx.clearRect(0,0,CW,CH);
+  ctx.save();
+  ctx.translate(cam.x,cam.y);
+  ctx.scale(cam.zoom,cam.zoom);
+
+  if(factoryView){
+    drawFactoryBg();
+    drawFactoryBuildings();
+    drawFactoryConveyors();
+  } else {
+    drawGrid();
+    drawConnections();
+    drawBuildings();
+    if(dragging) drawDragGhost();
+  }
+
+  // Connection-mode: draw in-progress line
+  if(connectMode && connectFromPid && mouseWorld){
+    const src=placed.find(p=>p.pid===connectFromPid);
+    if(src){
+      const def=DEFS.find(d=>d.id===src.id);
+      const sx=(src.c+def.w/2)*CELL, sy=(src.r+def.h/2)*CELL;
+      ctx.save();
+      ctx.strokeStyle='#2dd4bf';ctx.lineWidth=2/cam.zoom;
+      ctx.setLineDash([6/cam.zoom,4/cam.zoom]);
+      ctx.beginPath();ctx.moveTo(sx,sy);ctx.lineTo(mouseWorld.x,mouseWorld.y);ctx.stroke();
+      ctx.setLineDash([]);ctx.restore();
+    }
+  }
+
+  ctx.restore();
+}
+
+// ─── SCHEMA VIEW ────────────────────────────────────────
+function drawGrid(){
+  const s=CELL,ox=-cam.x/cam.zoom,oy=-cam.y/cam.zoom;
+  const Ww=CW/cam.zoom,Hh=CH/cam.zoom;
+  const sc=Math.floor(ox/s)-1,sr=Math.floor(oy/s)-1;
+  const ec=sc+Math.ceil(Ww/s)+2,er=sr+Math.ceil(Hh/s)+2;
+  ctx.strokeStyle='#151e22';ctx.lineWidth=0.5/cam.zoom;
+  for(let c=sc;c<=ec;c++){ctx.beginPath();ctx.moveTo(c*s,sr*s);ctx.lineTo(c*s,er*s);ctx.stroke();}
+  for(let r=sr;r<=er;r++){ctx.beginPath();ctx.moveTo(sc*s,r*s);ctx.lineTo(ec*s,r*s);ctx.stroke();}
+}
+
+function drawConnections(){
+  // draw actual connections
+  connections.forEach(conn=>{
+    const a=placed.find(p=>p.pid===conn.from);
+    const b=placed.find(p=>p.pid===conn.to);
+    if(!a||!b) return;
+    drawLink(a,b,a.active&&b.active,'#e8841a');
+  });
+
+  // if autoLink is ON draw automatic chain links (lighter)
+  if(autoLink){
+    for(let i=0;i<AUTO_CHAIN.length-1;i++){
+      const a=placed.find(p=>p.id===AUTO_CHAIN[i]);
+      const b=placed.find(p=>p.id===AUTO_CHAIN[i+1]);
+      if(!a||!b) continue;
+      // skip if manual connection already exists between them
+      const exists=connections.some(c=>(c.from===a.pid&&c.to===b.pid)||(c.from===b.pid&&c.to===a.pid));
+      if(!exists) drawLink(a,b,a.active&&b.active,'#e8841a');
+    }
+  }
+}
+
+function drawLink(a,b,on,baseColor){
+  const da=DEFS.find(d=>d.id===a.id),db=DEFS.find(d=>d.id===b.id);
+  const x1=(a.c+da.w)*CELL,y1=(a.r+da.h/2)*CELL;
+  const x2=b.c*CELL,y2=(b.r+db.h/2)*CELL;
+  ctx.save();
+  ctx.strokeStyle=on?baseColor:'#2c3840';
+  ctx.lineWidth=2/cam.zoom;
+  ctx.setLineDash([6/cam.zoom,4/cam.zoom]);
+  ctx.lineDashOffset=on?-(Date.now()/80%(10/cam.zoom)):0;
+  const mx=(x1+x2)/2;
+  ctx.beginPath();ctx.moveTo(x1,y1);ctx.bezierCurveTo(mx,y1,mx,y2,x2,y2);ctx.stroke();
+  ctx.setLineDash([]);
+  if(on){
+    const ang=Math.atan2(y2-y1,x2-x1);
+    ctx.fillStyle=baseColor;
+    ctx.beginPath();ctx.moveTo(x2,y2);
+    ctx.lineTo(x2-12/cam.zoom*Math.cos(ang-.4),y2-12/cam.zoom*Math.sin(ang-.4));
+    ctx.lineTo(x2-12/cam.zoom*Math.cos(ang+.4),y2-12/cam.zoom*Math.sin(ang+.4));
+    ctx.closePath();ctx.fill();
+  }
+  ctx.restore();
+}
+
+function drawBuildings(){
+  placed.forEach(p=>{
+    if(dragging&&dragging.pid===p.pid) return; // drawn as ghost
+    drawBuilding(p, false);
+  });
+}
+
+function drawBuilding(p, isGhost){
+  const def=DEFS.find(d=>d.id===p.id);if(!def) return;
+  const px=p.c*CELL,py=p.r*CELL,pw=def.w*CELL,ph=def.h*CELL;
+  const hov=hovPid===p.pid;
+
+  ctx.globalAlpha=isGhost?(dragValid?0.6:0.35):1;
+  ctx.fillStyle=isGhost?(dragValid?def.color:'#3a1010'):def.color;
+  ctx.strokeStyle=isGhost?(dragValid?'#2dd4bf':'#f87171'):(!p.active?'#2c3840':hov?'#f4a030':connectMode&&connectFromPid===p.pid?'#2dd4bf':'#e8841a');
+  ctx.lineWidth=(hov||isGhost?2.5:1.5)/cam.zoom;
+  roundRect(px,py,pw,ph,5/cam.zoom);
+
+  ctx.globalAlpha=isGhost?0.5:(p.active?1:.4);
+  ctx.fillStyle='#fff';
+  ctx.font=`${Math.min(pw,ph)*.36}px serif`;
+  ctx.textAlign='center';ctx.textBaseline='middle';
+  ctx.fillText(def.icon,px+pw/2,py+ph*.38);
+
+  ctx.globalAlpha=isGhost?0.7:1;
+  ctx.fillStyle=p.active?'#aaa':'#445';
+  ctx.font=`${11/cam.zoom}px 'Segoe UI',sans-serif`;
+  ctx.fillText(def.name,px+pw/2,py+ph*.72);
+
+  if(def.cycle>0){
+    const pct=p.progress/def.cycle;
+    ctx.fillStyle='#0d1618';ctx.fillRect(px+5/cam.zoom,py+ph-9/cam.zoom,pw-10/cam.zoom,5/cam.zoom);
+    ctx.fillStyle=p.active?'#e8841a':'#2c3840';
+    ctx.fillRect(px+5/cam.zoom,py+ph-9/cam.zoom,(pw-10/cam.zoom)*pct,5/cam.zoom);
+  }
+  if(p.badge>0){
+    const bx=px+pw-3/cam.zoom,by=py+3/cam.zoom,br=10/cam.zoom;
+    ctx.globalAlpha=1;
+    ctx.fillStyle=def.out==='ram'?'#4ade80':'#e8841a';
+    ctx.beginPath();ctx.arc(bx,by,br,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#000';ctx.font=`bold ${9/cam.zoom}px monospace`;
+    ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillText(Math.min(p.badge,99),bx,by);
+  }
+  ctx.globalAlpha=1;
+  ctx.textAlign='left';ctx.textBaseline='alphabetic';
+}
+
+function drawDragGhost(){
+  if(!dragging) return;
+  const p=placed.find(q=>q.pid===dragging.pid);
+  if(p) drawBuilding(p, true);
+}
+
+// ─── FACTORY VIEW ──────────────────────────────────────
+// Pixel-art style factory scene drawn with canvas 2D primitives
+
+function drawFactoryBg(){
+  const Ww=CW/cam.zoom, Hh=CH/cam.zoom;
+  const ox=-cam.x/cam.zoom, oy=-cam.y/cam.zoom;
+  // Floor tiles
+  const tileW=40, tileH=20;
+  const sc=Math.floor(ox/tileW)-1, sr=Math.floor(oy/tileH)-1;
+  const ec=sc+Math.ceil(Ww/tileW)+2, er=sr+Math.ceil(Hh/tileH)+2;
+  for(let r=sr;r<=er;r++){
+    for(let c=sc;c<=ec;c++){
+      const even=(c+r)%2===0;
+      ctx.fillStyle=even?'#111820':'#0d141a';
+      ctx.fillRect(c*tileW,r*tileH,tileW,tileH);
+    }
+  }
+  // grid lines subtle
+  ctx.strokeStyle='#182028';ctx.lineWidth=0.5/cam.zoom;
+  for(let c=sc;c<=ec;c++){ctx.beginPath();ctx.moveTo(c*tileW,sr*tileH);ctx.lineTo(c*tileW,er*tileH);ctx.stroke();}
+  for(let r=sr;r<=er;r++){ctx.beginPath();ctx.moveTo(sc*tileW,r*tileH);ctx.lineTo(ec*tileW,r*tileH);ctx.stroke();}
+}
+
+function drawFactoryBuildings(){
+  placed.forEach(p=>drawFactoryBuilding(p));
+}
+
+// Pixel-art style building: big block with windows, roof, chimney, etc.
+function drawFactoryBuilding(p){
+  const def=DEFS.find(d=>d.id===p.id);if(!def) return;
+  const px=p.c*CELL, py=p.r*CELL, pw=def.w*CELL, ph=def.h*CELL;
+  const on=p.active;
+
+  ctx.save();
+
+  // Shadow
+  ctx.fillStyle='#00000033';
+  ctx.fillRect(px+6,py+6,pw,ph);
+
+  // Main body
+  ctx.fillStyle=def.color;
+  ctx.strokeStyle=on?'#e8841a':'#2c3840';
+  ctx.lineWidth=2/cam.zoom;
+  ctx.fillRect(px,py,pw,ph);
+  ctx.strokeRect(px,py,pw,ph);
+
+  // Roof strip
+  ctx.fillStyle=def.dark||'#0a1014';
+  ctx.fillRect(px,py,pw,ph*0.12);
+  // Roof ridges
+  ctx.strokeStyle='#ffffff14';ctx.lineWidth=1/cam.zoom;
+  for(let i=0;i<4;i++){
+    const rx=px+pw*0.1+i*(pw*0.22);
+    ctx.beginPath();ctx.moveTo(rx,py);ctx.lineTo(rx,py+ph*0.12);ctx.stroke();
+  }
+
+  // Windows row (upper)
+  const ww=pw*0.18, wh=ph*0.15, wy=py+ph*0.18;
+  for(let i=0;i<2;i++){
+    const wx2=px+pw*0.15+i*(pw*0.42);
+    ctx.fillStyle='#0a1820';
+    ctx.fillRect(wx2,wy,ww,wh);
+    // glow if active
+    if(on){
+      ctx.fillStyle='rgba(255,180,60,0.18)';
+      ctx.fillRect(wx2,wy,ww,wh);
+      // window shine
+      ctx.fillStyle='rgba(255,255,255,0.06)';
+      ctx.fillRect(wx2,wy,ww,wh*0.4);
+    }
+    ctx.strokeStyle='#ffffff22';ctx.lineWidth=0.5/cam.zoom;
+    ctx.strokeRect(wx2,wy,ww,wh);
+  }
+
+  // Chimney
+  if(def.id!=='storage'){
+    const cx2=px+pw*0.78,cy=py-ph*0.28,cw2=pw*0.1,ch=ph*0.3;
+    ctx.fillStyle=def.dark||'#0a1014';
+    ctx.fillRect(cx2,cy,cw2,ch);
+    ctx.strokeStyle='#ffffff18';ctx.lineWidth=0.5/cam.zoom;
+    ctx.strokeRect(cx2,cy,cw2,ch);
+    // Smoke puffs when active
+    if(on){
+      for(let i=0;i<3;i++){
+        const st=(conveyorOffset/20+i*0.33)%1;
+        const sy2=cy-(st*ph*0.6);
+        const sa=on?(1-st)*0.5:0;
+        const sr2=pw*0.08*(1+st*0.5);
+        ctx.fillStyle=`rgba(180,200,210,${sa})`;
+        ctx.beginPath();ctx.arc(cx2+cw2/2,sy2,sr2,0,Math.PI*2);ctx.fill();
+      }
+    }
+  }
+
+  // Icon (emoji) in center
+  ctx.globalAlpha=on?1:.4;
+  ctx.font=`${Math.min(pw,ph)*0.28}px serif`;
+  ctx.textAlign='center';ctx.textBaseline='middle';
+  ctx.fillStyle='#fff';
+  ctx.fillText(def.icon,px+pw/2,py+ph*0.58);
+  ctx.globalAlpha=1;
+
+  // Name label below
+  ctx.fillStyle=on?'#aaa':'#445';
+  ctx.font=`bold ${10/cam.zoom}px 'Segoe UI',sans-serif`;
+  ctx.textAlign='center';ctx.textBaseline='top';
+  ctx.fillText(def.name,px+pw/2,py+ph+4/cam.zoom);
+
+  // Progress bar (on ground level)
+  if(def.cycle>0){
+    const pct=p.progress/def.cycle;
+    ctx.fillStyle='#0d1618';
+    ctx.fillRect(px,py+ph-6/cam.zoom,pw,6/cam.zoom);
+    const grad=ctx.createLinearGradient(px,0,px+pw,0);
+    grad.addColorStop(0,on?'#e8841a':'#2c3840');
+    grad.addColorStop(1,on?'#f4a030':'#2c3840');
+    ctx.fillStyle=grad;
+    ctx.fillRect(px,py+ph-6/cam.zoom,pw*pct,6/cam.zoom);
+  }
+
+  // Badge
+  if(p.badge>0){
+    const bx=px+pw-4/cam.zoom,by=py+4/cam.zoom,br=11/cam.zoom;
+    ctx.fillStyle=def.out==='ram'?'#4ade80':'#f4a030';
+    ctx.beginPath();ctx.arc(bx,by,br,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#000';ctx.font=`bold ${9/cam.zoom}px monospace`;
+    ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillText(Math.min(p.badge,99),bx,by);
+  }
+
+  // Active glow border
+  if(on){
+    ctx.strokeStyle='rgba(232,132,26,0.3)';
+    ctx.lineWidth=8/cam.zoom;
+    ctx.strokeRect(px-2/cam.zoom,py-2/cam.zoom,pw+4/cam.zoom,ph+4/cam.zoom);
+  }
+
+  ctx.restore();
+  ctx.textAlign='left';ctx.textBaseline='alphabetic';
+}
+
+function drawFactoryConveyors(){
+  // Gather all active connections
+  const allConns=getEffectiveConnections();
+
+  allConns.forEach(conn=>{
+    const a=placed.find(p=>p.pid===conn.from);
+    const b=placed.find(p=>p.pid===conn.to);
+    if(!a||!b) return;
+    const da=DEFS.find(d=>d.id===a.id),db=DEFS.find(d=>d.id===b.id);
+
+    // Conveyor starts at right edge of A, ends at left edge of B
+    const x1=(a.c+da.w)*CELL, y1=(a.r+da.h/2)*CELL;
+    const x2=b.c*CELL,         y2=(b.r+db.h/2)*CELL;
+    const on=a.active&&b.active;
+    const beltH=10/cam.zoom;
+
+    ctx.save();
+
+    // Belt body - thick dark strip
+    ctx.beginPath();
+    const mx=(x1+x2)/2;
+    ctx.moveTo(x1,y1);ctx.bezierCurveTo(mx,y1,mx,y2,x2,y2);
+    ctx.strokeStyle=on?'#1a2830':'#111820';
+    ctx.lineWidth=(beltH+4/cam.zoom);
+    ctx.stroke();
+
+    // Belt surface
+    ctx.beginPath();
+    ctx.moveTo(x1,y1);ctx.bezierCurveTo(mx,y1,mx,y2,x2,y2);
+    ctx.strokeStyle=on?'#243840':'#1a2430';
+    ctx.lineWidth=beltH;
+    ctx.stroke();
+
+    if(on){
+      // Moving slats
+      ctx.beginPath();
+      ctx.moveTo(x1,y1);ctx.bezierCurveTo(mx,y1,mx,y2,x2,y2);
+      ctx.strokeStyle='#2a4550';
+      ctx.lineWidth=beltH;
+      ctx.setLineDash([8/cam.zoom,6/cam.zoom]);
+      ctx.lineDashOffset=-conveyorOffset/cam.zoom;
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      // Animated packages on belt (small squares)
+      for(let t=0;t<3;t++){
+        const phase=((conveyorOffset/20+t/3))%1;
+        const bpt=getBezierPoint(x1,y1,mx,y1,mx,y2,x2,y2,phase);
+        const pSize=7/cam.zoom;
+        ctx.fillStyle='rgba(232,132,26,0.7)';
+        ctx.fillRect(bpt.x-pSize/2,bpt.y-pSize/2,pSize,pSize);
+        ctx.strokeStyle='rgba(255,160,50,0.5)';
+        ctx.lineWidth=1/cam.zoom;
+        ctx.strokeRect(bpt.x-pSize/2,bpt.y-pSize/2,pSize,pSize);
+      }
+    }
+
+    // Edge rails
+    ctx.beginPath();
+    ctx.moveTo(x1,y1);ctx.bezierCurveTo(mx,y1,mx,y2,x2,y2);
+    ctx.strokeStyle=on?'#e8841a33':'#1e2830';
+    ctx.lineWidth=1/cam.zoom;
+    ctx.setLineDash([]);
+    ctx.stroke();
+
+    ctx.restore();
+  });
+}
+
+function getBezierPoint(x1,y1,cx1,cy1,cx2,cy2,x2,y2,t){
+  const mt=1-t;
+  return {
+    x:mt*mt*mt*x1+3*mt*mt*t*cx1+3*mt*t*t*cx2+t*t*t*x2,
+    y:mt*mt*mt*y1+3*mt*mt*t*cy1+3*mt*t*t*cy2+t*t*t*y2
+  };
+}
+
+// ═══════════════════════════════════════════════════════
+//  CONNECTIONS LOGIC
+// ═══════════════════════════════════════════════════════
+function getEffectiveConnections(){
+  // Returns array of {from,to} pid pairs actually active
+  const result=[...connections];
+  if(autoLink){
+    for(let i=0;i<AUTO_CHAIN.length-1;i++){
+      const a=placed.find(p=>p.id===AUTO_CHAIN[i]);
+      const b=placed.find(p=>p.id===AUTO_CHAIN[i+1]);
+      if(!a||!b) continue;
+      const exists=result.some(c=>(c.from===a.pid&&c.to===b.pid)||(c.from===b.pid&&c.to===a.pid));
+      if(!exists) result.push({from:a.pid,to:b.pid,auto:true});
+    }
+  }
+  return result;
+}
+
+function addConnection(fromPid,toPid){
+  const exists=connections.some(c=>(c.from===fromPid&&c.to===toPid)||(c.from===toPid&&c.to===fromPid));
+  if(exists){addLog('Conexión ya existe','warn');return;}
+  connections.push({from:fromPid,to:toPid});
+  const a=placed.find(p=>p.pid===fromPid),b=placed.find(p=>p.pid===toPid);
+  addLog(`Conectado: ${DEFS.find(d=>d.id===a.id).name} → ${DEFS.find(d=>d.id===b.id).name}`,'ok');
+  updHUD();
+}
+
+// ═══════════════════════════════════════════════════════
+//  TICK / SIMULATION
+// ═══════════════════════════════════════════════════════
+function getConnectedSource(toPid,inKey){
+  // Find a placed building that has inKey in its queue and is connected to toPid
+  const effs=getEffectiveConnections().filter(c=>c.to===toPid);
+  for(const e of effs){
+    const src=placed.find(p=>p.pid===e.from);
+    if(src&&(src.q[inKey]||0)>0) return src;
+  }
+  return null;
+}
+
+const STEPS=[
+  {id:'litho',  inKey:'mat',    outKey:'wafer'},
+  {id:'doping', inKey:'wafer',  outKey:'chip'},
+  {id:'solder', inKey:'chip',   outKey:'pcb'},
+  {id:'qa',     inKey:'pcb',    outKey:'tested'},
+  {id:'pack',   inKey:'tested', outKey:'ram'},
+];
+
+function tick(){
+  elapsed++;
+  // Supply
+  const sup=placed.find(p=>p.id==='supply');
+  if(sup&&sup.active){
+    sup.progress=(sup.progress||0)+1;
+    if(sup.progress>=3){sup.progress=0;sup.badge++;sup.q.mat=(sup.q.mat||0)+1;}
+  }
+  // Steps
+  STEPS.forEach(s=>{
+    const mod=placed.find(p=>p.id===s.id);if(!mod||!mod.active) return;
+    const def=DEFS.find(d=>d.id===s.id);
+    if(mod.progress>0){
+      mod.progress++;
+      if(mod.progress>=def.cycle){
+        mod.progress=0;mod.badge++;
+        mod.q[s.outKey]=(mod.q[s.outKey]||0)+1;
+        if(s.outKey==='ram'){
+          totalRam++;
+          const st=placed.find(p=>p.id==='storage');
+          if(st)st.badge=totalRam;
+          addLog('RAM DDR5 #'+totalRam+' lista','ok');
+        }
+      }
+    } else {
+      // Try to get input from a connected source
+      const src=getConnectedSource(mod.pid,s.inKey);
+      if(src){src.q[s.inKey]--;mod.progress=1;}
+    }
+  });
+  updHUD();
+}
+
+setInterval(()=>{
+  if(spd===0) return;
+  const mm=String(Math.floor(elapsed/60)).padStart(2,'0');
+  const ss=String(elapsed%60).padStart(2,'0');
+  document.getElementById('hTime').textContent=mm+':'+ss;
+},1000);
+
+function setSpd(s){
+  spd=s;clearInterval(ticker);
+  if(s>0) ticker=setInterval(tick,1000/s);
+  ['s0','s1','s2'].forEach(id=>document.getElementById(id).className='spd');
+  document.getElementById(s===0?'s0':s===1?'s1':'s2').className='spd on';
+}
+
+function updHUD(){
+  document.getElementById('hCoins').textContent=Math.floor(coins);
+  document.getElementById('hRam').textContent=totalRam;
+  document.getElementById('pRam').textContent=totalRam;
+  document.getElementById('pMods').textContent=placed.length;
+  const q=placed.reduce((a,p)=>a+Object.values(p.q||{}).reduce((b,v)=>b+v,0),0);
+  document.getElementById('pQueue').textContent=q;
+  document.getElementById('pConns').textContent=getEffectiveConnections().length;
+  const hasActive=placed.some(p=>p.active&&DEFS.find(d=>d.id===p.id).cycle>0);
+  document.getElementById('pCycle').textContent=hasActive?'Activo':'—';
+}
+
+function addLog(m,t=''){
+  logs.unshift({m,t});if(logs.length>40)logs.pop();
+  const el=document.getElementById('pLog');
+  el.innerHTML='<div style="font-size:9px;color:#334;margin-bottom:5px">EVENTOS</div>'+
+    logs.slice(0,20).map(l=>`<div class="log${l.t?' '+l.t:''}">${l.m}</div>`).join('');
+}
+
+// ═══════════════════════════════════════════════════════
+//  PLACEMENT
+// ═══════════════════════════════════════════════════════
+function wp(ex,ey){return{x:(ex-cam.x)/cam.zoom,y:(ey-cam.y)/cam.zoom};}
+function toCell(wx,wy){return{c:Math.floor(wx/CELL),r:Math.floor(wy/CELL)};}
+
+function isOccupied(c,r,skipPid){
+  return placed.some(p=>{
+    if(skipPid&&p.pid===skipPid) return false;
+    const d=DEFS.find(x=>x.id===p.id);
+    return c>=p.c&&c<p.c+d.w&&r>=p.r&&r<p.r+d.h;
+  });
+}
+
+function checkPlaceValid(defId,c,r,skipPid){
+  const def=DEFS.find(d=>d.id===defId);if(!def) return false;
+  for(let rr=r;rr<r+def.h;rr++)
+    for(let cc=c;cc<c+def.w;cc++)
+      if(isOccupied(cc,rr,skipPid)) return false;
+  return true;
+}
+
+function placeAt(defId,c,r,free=false){
+  const def=DEFS.find(d=>d.id===defId);if(!def) return false;
+  if(!free&&coins<def.cost){addLog('Sin monedas — necesitas 💰'+def.cost,'warn');return false;}
+  if(!checkPlaceValid(defId,c,r)){addLog('Espacio ocupado','warn');return false;}
+  if(!free) coins-=def.cost;
+  placed.push({pid:'p'+Date.now()+Math.random().toString(36).slice(2),id:defId,c,r,progress:0,active:true,badge:0,q:{}});
+  addLog(def.name+' colocada','ok');
+  updHUD();return true;
+}
+
+const PREFAB=[
+  {id:'supply',c:0,r:2},{id:'litho',c:3,r:1},{id:'doping',c:3,r:4},
+  {id:'solder',c:7,r:2},{id:'qa',c:7,r:5},{id:'pack',c:11,r:3},{id:'storage',c:14,r:3},
+];
+
+function placeFab(){
+  placed=[];connections=[];totalRam=0;elapsed=0;logs=[];
+  PREFAB.forEach(({id,c,r})=>placeAt(id,c,r,true));
+  cam={x:60,y:80,zoom:.9};
+  if(spd===0) setSpd(1);
+  addLog('Fábrica completa activada','ok');updHUD();
+}
+
+function clearFab(){
+  if(!confirm('¿Limpiar toda la fábrica?')) return;
+  placed=[];connections=[];coins=500;totalRam=0;elapsed=0;logs=[];
+  addLog('Fábrica reiniciada');updHUD();
+}
+
+// ═══════════════════════════════════════════════════════
+//  AUTO LINK TOGGLE
+// ═══════════════════════════════════════════════════════
+function toggleAutoLink(){
+  autoLink=!autoLink;
+  const btn=document.getElementById('autoLinkBtn');
+  btn.className='autolink-toggle'+(autoLink?' on':'');
+  addLog(autoLink?'Auto-link activado':'Auto-link desactivado', autoLink?'ok':'warn');
+  updHUD();
+}
+
+// ═══════════════════════════════════════════════════════
+//  VIEW SWITCH
+// ═══════════════════════════════════════════════════════
+function toggleView(){
+  factoryView=!factoryView;
+  const tr=document.getElementById('swTrack');
+  tr.className='sw-track'+(factoryView?' on':'');
+  document.getElementById('vlblA').className='lbl'+(factoryView?'':' on');
+  document.getElementById('vlblB').className='lbl'+(factoryView?' on':'');
+  addLog(factoryView?'Vista: Fábrica realista':'Vista: Esquemas');
+}
+
+// ═══════════════════════════════════════════════════════
+//  SELECT DEF / CONNECT MODE
+// ═══════════════════════════════════════════════════════
+function selectDef(id){
+  exitConnectMode();
+  selected=selected===id?null:id;
+  canvas.style.cursor=selected?'crosshair':'default';
+  DEFS.forEach(d=>{const el=document.getElementById('tb-'+d.id);if(el)el.className='btn'+(selected===d.id?' sel':'');});
+  hint(selected?'Clic izquierdo para colocar · Esc para cancelar':'');
+}
+
+function enterConnectMode(fromPid){
+  connectMode=true;
+  connectFromPid=fromPid;
+  selected=null;
+  DEFS.forEach(d=>{const el=document.getElementById('tb-'+d.id);if(el)el.className='btn';});
+  canvas.style.cursor='crosshair';
+  document.getElementById('connOverlay').className='active';
+  const src=placed.find(p=>p.pid===fromPid);
+  hint('Clic en otro módulo para conectar desde '+DEFS.find(d=>d.id===src.id).name+' · Esc para cancelar');
+}
+
+function exitConnectMode(){
+  connectMode=false;
+  connectFromPid=null;
+  canvas.style.cursor='default';
+  document.getElementById('connOverlay').className='';
+  hint('');
+}
+
+function hint(msg){
+  const el=document.getElementById('hint');
+  el.textContent=msg;el.className=msg?'show':'';
+}
+
+// ═══════════════════════════════════════════════════════
+//  HIT TEST
+// ═══════════════════════════════════════════════════════
+function getBld(wx,wy){
+  for(let i=placed.length-1;i>=0;i--){
+    const p=placed[i],def=DEFS.find(d=>d.id===p.id);
+    if(wx>=p.c*CELL&&wx<(p.c+def.w)*CELL&&wy>=p.r*CELL&&wy<(p.r+def.h)*CELL) return p;
+  }
+  return null;
+}
+
+// ═══════════════════════════════════════════════════════
+//  MOUSE EVENTS
+// ═══════════════════════════════════════════════════════
+let mouseWorld=null;
+
+canvas.addEventListener('contextmenu',e=>e.preventDefault());
+
+canvas.addEventListener('mousedown',e=>{
+  hideCtx();
+  const {x,y}=wp(e.clientX,e.clientY-50);
+  const {c,r}=toCell(x,y);
+  const bld=getBld(x,y);
+
+  // Right mouse: pan or context menu
+  if(e.button===2){
+    panning=true;
+    panStart={x:e.clientX,y:e.clientY};
+    camStart={x:cam.x,y:cam.y};
+    canvas.style.cursor='grabbing';
+    return;
+  }
+
+  // Left click
+  if(e.button===0){
+    // Connection mode: click target
+    if(connectMode){
+      if(bld&&bld.pid!==connectFromPid){
+        addConnection(connectFromPid,bld.pid);
+      }
+      exitConnectMode();
+      return;
+    }
+    // Place mode
+    if(selected){
+      placeAt(selected,c,r);
+      return;
+    }
+    // Drag mode
+    if(bld){
+      dragging={pid:bld.pid,origC:bld.c,origR:bld.r};
+      dragOff={c:c-bld.c,r:r-bld.r};
+      dragValid=true;
+      canvas.style.cursor='grabbing';
+    }
+  }
+});
+
+canvas.addEventListener('mousemove',e=>{
+  const {x,y}=wp(e.clientX,e.clientY-50);
+  mouseWorld={x,y};
+
+  if(panning){
+    cam.x=camStart.x+(e.clientX-panStart.x);
+    cam.y=camStart.y+(e.clientY-panStart.y);
+    return;
+  }
+  if(dragging){
+    const {c,r}=toCell(x,y);
+    const p=placed.find(q=>q.pid===dragging.pid);
+    if(p){
+      const def=DEFS.find(d=>d.id===p.id);
+      const nc=c-dragOff.c, nr=r-dragOff.r;
+      p.c=nc;p.r=nr;
+      dragValid=checkPlaceValid(p.id,nc,nr,p.pid);
+    }
+    return;
+  }
+  const bld=getBld(x,y);
+  hovPid=bld?bld.pid:null;
+  if(!connectMode&&!selected)
+    canvas.style.cursor=bld?'grab':'default';
+});
+
+canvas.addEventListener('mouseup',e=>{
+  if(e.button===2){
+    const dx=Math.abs(e.clientX-panStart.x),dy=Math.abs(e.clientY-panStart.y);
+    panning=false;
+    if(dx<5&&dy<5){
+      const {x,y}=wp(e.clientX,e.clientY-50);
+      const bld=getBld(x,y);
+      if(bld){showCtx(bld.pid,e.clientX,e.clientY);return;}
+    }
+    canvas.style.cursor='default';
+  }
+  if(e.button===0&&dragging){
+    // Snap back if invalid
+    if(!dragValid){
+      const p=placed.find(q=>q.pid===dragging.pid);
+      if(p){p.c=dragging.origC;p.r=dragging.origR;}
+      addLog('Posición inválida — restaurado','warn');
+    } else {
+      addLog('Módulo movido','ok');
+    }
+    dragging=null;
+    dragValid=true;
+    canvas.style.cursor='default';
+  }
+});
+
+canvas.addEventListener('mouseleave',()=>{mouseWorld=null;});
+
+canvas.addEventListener('wheel',e=>{
+  e.preventDefault();
+  const f=e.deltaY<0?1.1:.9;
+  const mx=e.clientX,my=e.clientY-50;
+  const wx=(mx-cam.x)/cam.zoom,wy=(my-cam.y)/cam.zoom;
+  cam.zoom=Math.min(3,Math.max(.15,cam.zoom*f));
+  cam.x=mx-wx*cam.zoom;cam.y=my-wy*cam.zoom;
+},{passive:false});
+
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape'){selectDef(null);exitConnectMode();}
+});
+
+// ═══════════════════════════════════════════════════════
+//  CONTEXT MENU
+// ═══════════════════════════════════════════════════════
+function showCtx(pid,ex,ey){
+  ctxPid=pid;
+  const p=placed.find(q=>q.pid===pid);
+  document.getElementById('ctxPauseLbl').textContent=p.active?'Pausar módulo':'Reanudar módulo';
+  document.getElementById('ctxPause').children[0].textContent=p.active?'⏸':'▶';
+  const el=document.getElementById('ctx');
+  let lx=ex,ly=ey;
+  if(lx+160>window.innerWidth) lx=window.innerWidth-170;
+  if(ly+140>window.innerHeight) ly=window.innerHeight-150;
+  el.style.left=lx+'px';el.style.top=ly+'px';el.style.display='block';
+}
+function hideCtx(){document.getElementById('ctx').style.display='none';ctxPid=null;}
+function ctxDoPause(){
+  const p=placed.find(q=>q.pid===ctxPid);
+  if(p){p.active=!p.active;addLog((p.active?'▶ Reanudado: ':'⏸ Pausado: ')+DEFS.find(d=>d.id===p.id).name);}
+  hideCtx();
+}
+function ctxDoConnect(){
+  const pid=ctxPid;hideCtx();enterConnectMode(pid);
+}
+function ctxDoRemove(){
+  const idx=placed.findIndex(p=>p.pid===ctxPid);
+  if(idx>=0){
+    const pid=placed[idx].pid;
+    const def=DEFS.find(d=>d.id===placed[idx].id);
+    coins+=Math.floor(def.cost*.5);
+    connections=connections.filter(c=>c.from!==pid&&c.to!==pid);
+    addLog(def.name+' demolida (50% reembolso)');
+    placed.splice(idx,1);
+  }
+  hideCtx();updHUD();
+}
+document.addEventListener('click',e=>{
+  if(!document.getElementById('ctx').contains(e.target)) hideCtx();
+});
+
+// ═══════════════════════════════════════════════════════
+//  HELPERS
+// ═══════════════════════════════════════════════════════
+function roundRect(x,y,w,h,r){
+  ctx.beginPath();
+  ctx.moveTo(x+r,y);ctx.lineTo(x+w-r,y);ctx.arcTo(x+w,y,x+w,y+r,r);
+  ctx.lineTo(x+w,y+h-r);ctx.arcTo(x+w,y+h,x+w-r,y+h,r);
+  ctx.lineTo(x+r,y+h);ctx.arcTo(x,y+h,x,y+h-r,r);
+  ctx.lineTo(x,y+r);ctx.arcTo(x,y,x+r,y,r);
+  ctx.closePath();ctx.fill();ctx.stroke();
+}
+
+// ═══════════════════════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════════════════════
+setSpd(1);
+updHUD();
+addLog('Bienvenido a RAM Factory','ok');
+addLog('Clic derecho en módulo → Conectar','');
+</script>
+</body>
+</html>

@@ -1,0 +1,111 @@
+/* ============================================================
+   CUBE RUNNER 3D — style.css
+   ============================================================ */
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: #05050f;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  font-family: 'Courier New', Courier, monospace;
+  overflow: hidden;
+}
+
+/* Contenedor principal */
+#game-wrapper {
+  position: relative;
+  width: 900px;
+  height: 500px;
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 0 60px rgba(120, 80, 255, 0.35);
+}
+
+canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* ── HUD ── */
+#hud {
+  position: absolute;
+  top: 14px;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: space-between;
+  padding: 0 20px;
+  pointer-events: none;
+}
+
+.hud-box {
+  background: rgba(10, 8, 30, 0.65);
+  border: 1px solid rgba(140, 100, 255, 0.4);
+  border-radius: 8px;
+  padding: 5px 16px;
+  color: #d4c7ff;
+  font-size: 13px;
+  letter-spacing: 2px;
+}
+
+.hud-box span {
+  color: #ffffff;
+  font-size: 15px;
+  font-weight: bold;
+  margin-left: 6px;
+}
+
+/* ── Overlay ── */
+#overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: rgba(5, 5, 20, 0.82);
+  gap: 12px;
+  transition: opacity 0.3s;
+}
+
+#title {
+  font-size: 38px;
+  font-weight: bold;
+  letter-spacing: 6px;
+  color: #a78bfa;
+  text-shadow: 0 0 24px rgba(167, 139, 250, 0.6);
+}
+
+#msg {
+  font-size: 14px;
+  color: #c4b5fd;
+  letter-spacing: 1px;
+}
+
+#btn {
+  margin-top: 8px;
+  background: #7c3aed;
+  color: #fff;
+  border: none;
+  padding: 11px 40px;
+  border-radius: 8px;
+  font-size: 16px;
+  font-family: inherit;
+  letter-spacing: 2px;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.1s;
+}
+
+#btn:hover  { background: #6d28d9; }
+#btn:active { transform: scale(0.97); }
+
+#hint {
+  font-size: 11px;
+  color: #6b7280;
+  letter-spacing: 1px;
+  margin-top: 4px;
+}

@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Cube Runner 3D</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <div id="game-wrapper">
+
+    <canvas id="c"></canvas>
+
+    <!-- HUD -->
+    <div id="hud">
+      <div class="hud-box">SCORE <span id="sc">0</span></div>
+      <div class="hud-box">BEST  <span id="bs">0</span></div>
+    </div>
+
+    <!-- Overlay de inicio / game over -->
+    <div id="overlay">
+      <div id="title">CUBE RUNNER</div>
+      <div id="msg">¡Esquiva los obstáculos!</div>
+      <button id="btn">▶ JUGAR</button>
+      <div id="hint">← → / A D  cambiar carril  |  ESPACIO / ↑  saltar</div>
+    </div>
+
+  </div>
+
+  <!-- Three.js desde CDN -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="game.js"></script>
+</body>
+</html>
